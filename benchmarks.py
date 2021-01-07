@@ -98,5 +98,5 @@ for size in sizes:
     })
 
 
-with open('benchmark_results.json', 'r') as f:
+with open('benchmark_results.json', 'w') as f:
     json.dump(size_timing, f)
