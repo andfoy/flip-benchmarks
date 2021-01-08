@@ -32,7 +32,7 @@ def base_agg():
     }
 
 
-with open('benchmark_results', 'r') as f:
+with open('benchmark_results.json', 'r') as f:
     results = json.load(f)
 
 agg = {
@@ -43,8 +43,8 @@ agg = {
 sizes = []
 
 for size_entry in results:
-    size = results['size']
-    times = results['timing']
+    size = size_entry['size']
+    times = size_entry['timing']
     sizes.append(size_product(size))
     for direction in {'horizontal', 'vertical'}:
         direction_results = times[direction]
@@ -89,7 +89,8 @@ for direction in agg:
                 err_xs.append((x, x))
                 err_ys.append((y - yerr, y + yerr))
 
-            p.multi_line(err_xs, err_ys, legend_label=f'{source}')
+            p.multi_line(err_xs, err_ys, line_color=color,
+                         legend_label=f'{source}')
 
         p.legend.location = "top_left"
         p.legend.label_text_font = "DIN"
