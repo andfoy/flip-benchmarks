@@ -73,7 +73,7 @@ for direction in agg:
         p.yaxis.major_label_text_font = 'DIN'
         p.yaxis.major_label_text_font = 'DIN'
         p.title.text_font = 'DIN'
-        p.output_backend = 'svg'
+        # p.output_backend = 'png'
 
         for source, color in zip(sources_results, colors):
             source_results = sources_results[source]
