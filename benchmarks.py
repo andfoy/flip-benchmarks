@@ -98,6 +98,12 @@ index_generators = {
     'vertical': lambda h, _:  list(range(h))[::-1]
 }
 
+index_transforms = {
+    'cv2': lambda x: x,
+    'torch.flip': lambda x: x,
+    'indexing': lambda x: torch.tensor(x)
+}
+
 for size in sizes:
     H, W, _ = size
     size_sample = size_entry()
@@ -110,6 +116,7 @@ for size in sizes:
                 bench_input = func_transforms[func](sample_input)
                 for direction in {'vertical', 'horizontal'}:
                     indices = index_generators[direction](H, W)
+                    indices = index_transforms[func](indices)
                     bench_list = size_sample[direction][dtype][func]
                     bench_fn = benchmark_funcs[direction][func]
 
