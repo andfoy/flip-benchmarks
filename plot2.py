@@ -2,6 +2,7 @@
 # Standard library imports
 import json
 import itertools
+import time
 
 # Third party imports
 from bokeh.models import Label
@@ -33,7 +34,7 @@ def base_agg():
     }
 
 
-with open('benchmark_results_4.json', 'r') as f:
+with open('benchmark_results_5.json', 'r') as f:
     results = json.load(f)
 
 agg = {
@@ -112,3 +113,4 @@ for direction in agg:
         p.legend.label_text_font = "DIN"
         p.legend.label_text_font_style = "normal"
         show(p)
+        time.sleep(0.2)

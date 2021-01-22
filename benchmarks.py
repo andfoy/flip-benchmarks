@@ -9,6 +9,10 @@ import numpy as np
 import torch
 import tqdm
 
+# Disable multithreading
+cv2.setNumThreads(1)
+torch.set_num_threads(1)
+
 
 def timing():
     return {
