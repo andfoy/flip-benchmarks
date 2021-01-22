@@ -116,11 +116,11 @@ for size in sizes:
                 bench_input = func_transforms[func](sample_input)
                 for direction in {'vertical', 'horizontal'}:
                     indices = index_generators[direction](H, W)
-                    indices = index_transforms[func](indices)
                     bench_list = size_sample[direction][dtype][func]
                     bench_fn = benchmark_funcs[direction][func]
 
                     start_time = time.time()
+                    indices = index_transforms[func](indices)
                     bench_fn(bench_input, indices)
                     end_time = time.time() - start_time
                     bench_list.append(end_time)

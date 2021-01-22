@@ -33,7 +33,7 @@ def base_agg():
     }
 
 
-with open('benchmark_results_2.json', 'r') as f:
+with open('benchmark_results_3.json', 'r') as f:
     results = json.load(f)
 
 agg = {
