@@ -101,7 +101,7 @@ index_generators = {
 index_transforms = {
     'cv2': lambda x: x,
     'torch.flip': lambda x: x,
-    'indexing': lambda x: torch.tensor(x)
+    'indexing': lambda x: torch.arange(len(x) - 1, -1, -1)
 }
 
 for size in sizes:
