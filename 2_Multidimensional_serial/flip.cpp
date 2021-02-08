@@ -1,6 +1,14 @@
 
 #include <torch/torch.h>
 
+/**
+ * Convert a 1D index into an N-D one.
+ *
+ * \param idx a one dimensional index to convert
+ * \param dims a list containing the reference N-dimensional bases.
+ * \return the corresponding index in the N-dimensional reference in the form
+ * of a vector.
+ **/
 std::vector<int64_t> index_to_multidimensional(int64_t idx, torch::IntArrayRef dims) {
     const int64_t size = dims.size();
     std::vector<int64_t> result;
@@ -20,6 +28,12 @@ std::vector<int64_t> index_to_multidimensional(int64_t idx, torch::IntArrayRef d
     return result;
 }
 
+/**
+ * Convert an N-dimensional index into a 1-dimensional one.
+ * \param multidim a vector containing the N-dimensional coordinates to convert.
+ * \param dims a list containing the reference N-dimensional bases.
+ * \return the corresponding index in a 1-dimensional reference.
+ **/
 int64_t multidimensional_to_index(std::vector<int64_t> multidim, torch::IntArrayRef dims) {
     int64_t idx = 0;
     int64_t stride = 1;
@@ -32,6 +46,13 @@ int64_t multidimensional_to_index(std::vector<int64_t> multidim, torch::IntArray
     return idx;
 }
 
+/**
+ * Flip a N-dimensional coordinate, given a set of dimensions to flip and the N-dimensional reference bases.
+ * \param multidim a vector containing the N-dimensional coordinates to flip.
+ * \param dims a list containing the reference N-dimensional bases.
+ * \param flip_dims a list containing the index positions to flip.
+ * \return a vector containing the flipped N-dimensional coordinates.
+ **/
 std::vector<int64_t> flip_dimensions(std::vector<int64_t> multidim, torch::IntArrayRef dims, torch::IntArrayRef flip_dims) {
     for(int64_t dim : flip_dims) {
         multidim[dim] = dims[dim] - multidim[dim] - 1;
@@ -39,6 +60,11 @@ std::vector<int64_t> flip_dimensions(std::vector<int64_t> multidim, torch::IntAr
     return multidim;
 }
 
+/**
+ * Flip a N-dimensional tensor around a given set of dimensions.
+ * \param input the input tensor to flip
+ * \param flip_dims a list of dimensions used to flip the tensor.
+ **/
 torch::Tensor generalized_flip(torch::Tensor input, torch::IntArrayRef flip_dims) {
     auto sizes = input.sizes();
     torch::TensorIteratorConfig config;
