@@ -85,13 +85,38 @@ torch::Tensor generalized_flip(torch::Tensor input, torch::IntArrayRef flip_dims
         scalar_t *dst = (scalar_t *)data[0];
         scalar_t *src = (scalar_t *)data[1];
 
+        auto start = std::chrono::steady_clock::now();
+        double idx_multidim_time = 0.0;
+        double multidim_idx_time = 0.0;
+        double flip_dim_time = 0.0;
         for (int64_t i = 0; i < n; i++)
         {
+            auto multi_dims_start = std::chrono::steady_clock::now();
             auto multi_dims = index_to_multidimensional(i, sizes);
+            auto multi_dims_end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed_multidim_seconds = multi_dims_end - multi_dims_start;
+            idx_multidim_time += elapsed_multidim_seconds.count();
+
+            auto flipped_dims_start = std::chrono::steady_clock::now();
             auto flipped_dims = flip_dimensions(multi_dims, sizes, flip_dims);
+            auto flipped_dims_end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed_flipped_seconds = flipped_dims_end - flipped_dims_start;
+            flip_dim_time += elapsed_flipped_seconds.count();
+
+            auto flipped_idx_start = std::chrono::steady_clock::now();
             auto flipped_idx = multidimensional_to_index(flipped_dims, sizes);
+            auto flipped_idx_end = std::chrono::steady_clock::now();
+            std::chrono::duration<double> elapsed_flipped_idx_seconds = flipped_idx_end - flipped_idx_start;
+            multidim_idx_time += elapsed_flipped_idx_seconds.count();
+
             dst[flipped_idx] = src[i];
         }
+        auto end = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        std::cout << "Avg Elapsed time (ms): " << (elapsed_seconds.count() / n) * 1000 << std::endl;
+        std::cout << "Avg 1D to N-D (ms):" << (idx_multidim_time / n) * 1000 << std::endl;
+        std::cout << "Avg N-D flipping (ms):" << (flip_dim_time / n) * 1000 << std::endl;
+        std::cout << "Avg N-D to 1D (ms):" << (multidim_idx_time / n) * 1000 << std::endl;
     };
 
     iter.serial_for_each(loop, {0, iter.numel()});
