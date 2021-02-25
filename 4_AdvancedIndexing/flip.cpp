@@ -209,7 +209,26 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
     std::vector<torch::Tensor> indices;
 
     for(int64_t dim: flip_dims) {
-      indices.push_back(create_index(dim, input));
+      auto index = create_index(dim, input);
+      indices.push_back(index);
+      std::cout << "Index size: " << index.sizes() << std::endl;
+    }
+
+    const int64_t* dim_ptr = flip_dims.begin();
+    for(int64_t i = 0; i < input.dim(); i++) {
+      if(i != *dim_ptr) {
+        indices.emplace(indices.begin());
+      } else {
+        dim_ptr++;
+      }
+    }
+
+    for(auto index: indices) {
+      if(index.defined()) {
+        std::cout << "Index size: " << index.sizes() << std::endl;
+      } else {
+        std::cout << "nil index" << std::endl;
+      }
     }
 
     try {
@@ -217,6 +236,10 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
     } catch (std::exception& e) {
       TORCH_CHECK_INDEX(false, "shape mismatch: indexing tensors could not be broadcast together"
                         " with shapes ", shapes_as_str(indices));
+    }
+
+    for(auto index: indices) {
+      std::cout << "Expanded index size: " << index.sizes() << std::endl;
     }
 
     // add missing null Tensors so that it matches self.dim()
