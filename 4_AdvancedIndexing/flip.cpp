@@ -144,13 +144,13 @@ AdvancedIndex::AdvancedIndex(const torch::Tensor& src, torch::TensorList indices
 torch::Tensor create_index(int64_t dim, torch::Tensor input) {
     auto dim_index = torch::arange(input.size(dim) - 1, -1, -1).to(
         input.device());
-    for(int64_t i = 0; i < dim; i++) {
+    for(int64_t i = 0; i < dim - 1; i++) {
         dim_index = dim_index.unsqueeze(0);
     }
     for(int64_t i = dim + 1; i < input.dim(); i++) {
         dim_index = dim_index.unsqueeze(-1);
     }
-    return dim_index.expand_as(input);
+    return dim_index;  // dim_index.expand_as(input);
 }
 
 
@@ -189,14 +189,15 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
                  std::make_move_iterator(empty_sizes.end()));
     std::cout << "Sizes: " << sizes << std::endl;
     auto input_permute = input.permute(sizes);
-    // for(auto size: sizes) {
+    for(auto index: result) {
     //   auto index = result[size];
     //   if(index.defined()) {
     //     result_indices.push_back(index.permute(sizes));
     //   } else {
     //     result_indices.push_back(index);
     //   }
-    // }
+        std::cout << "Expanded index size: " << index.sizes() << std::endl;
+    }
 
     std::cout << "Permute size: " << input_permute.sizes() << std::endl;
     return std::make_tuple(input_permute, std::move(result));
