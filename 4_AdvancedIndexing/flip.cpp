@@ -50,6 +50,57 @@ struct Indexer {
   }
 };
 
+static std::string shapes_as_str(torch::TensorList tensors) {
+  std::ostringstream os;
+  bool first = true;
+  for (auto& tensor : tensors) {
+    if (tensor.defined()) {
+      if (!first) {
+        os << ", ";
+      }
+      os << tensor.sizes();
+      first = false;
+    }
+  }
+  return os.str();
+}
+
+static bool hasContiguousSubspace(torch::TensorList tl) {
+  // true if all the non-null tensors are adjacent
+  auto isDefined = [](const torch::Tensor & tensor){ return tensor.defined(); };
+  auto isNull = [](const torch::Tensor & tensor){ return !tensor.defined(); };
+  auto start = std::find_if(tl.begin(), tl.end(), isDefined);
+  auto stop = std::find_if(tl.rbegin(), tl.rend(), isDefined);
+  auto it = std::find_if(start, stop.base(), isNull);
+  return it == stop.base();
+}
+
+// Transposes the tensor and indices together so that all the non-null indices
+// index the first k dimensions of the tensor. Returns the transposed tensor
+// and the reordered indices. For example:
+// transposeToFront(tensor, {nullptr, a, nullptr, b})
+// returns
+// tensor.permute([1, 3, 0, 2]), {a, b, nullptr, nullptr}
+static std::tuple<torch::Tensor, std::vector<torch::Tensor>>
+transposeToFront(torch::Tensor self, torch::TensorList indices) {
+  std::vector<int64_t> dims;
+  std::vector<torch::Tensor> transposedIndices;
+  dims.reserve(self.dim());
+  for (auto i = decltype(self.dim()){0}; i < self.dim(); i++) {
+    if (indices[i].defined()) {
+      dims.push_back(i);
+      transposedIndices.emplace_back(indices[i]);
+    }
+  }
+  for (auto i = decltype(self.dim()){0}; i < self.dim(); i++) {
+    if (!indices[i].defined()) {
+      dims.push_back(i);
+      transposedIndices.emplace_back();
+    }
+  }
+  return std::make_tuple(self.permute(dims), std::move(transposedIndices));
+}
+
 // Replace indexed dimensions in src with stride 0 and the size of the result tensor.
 // The offset in these dimensions is computed by the kernel using the index tensor's
 // values and the stride of src. The new shape is not meaningful. It's used to make
@@ -155,52 +206,40 @@ torch::Tensor create_index(int64_t dim, torch::Tensor input) {
 
 
 std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tensor input, torch::IntArrayRef flip_dims) {
-    std::vector<torch::Tensor> result;
-    std::vector<torch::Tensor> result_indices;
-    std::vector<torch::Tensor> empty_result;
-    std::vector<int64_t> sizes;
-    std::vector<int64_t> empty_sizes;
+    std::vector<torch::Tensor> indices;
 
-    const int64_t* dim_ptr = flip_dims.begin();
-
-    // Create indices for each declared dimension and empty ones where there are not dimensions
-    for(int64_t i = 0; i < input.dim(); i++) {
-        auto dim = *dim_ptr;
-        if(i == dim) {
-            auto index = create_index(dim, input);
-            result.push_back(index);
-            sizes.push_back(i);
-            dim_ptr++;
-        } else {
-            empty_result.emplace_back();
-            empty_sizes.push_back(i);
-        }
-    }
-    std::cout << "Sizes: " << sizes << std::endl;
-    std::cout << "Empty sizes: " << empty_sizes << std::endl;
-
-    // Join both defined and empty indices in order to permute the input tensor
-    result.insert(result.end(),
-                  std::make_move_iterator(empty_result.begin()),
-                  std::make_move_iterator(empty_result.end()));
-
-    sizes.insert(sizes.end(),
-                 std::make_move_iterator(empty_sizes.begin()),
-                 std::make_move_iterator(empty_sizes.end()));
-    std::cout << "Sizes: " << sizes << std::endl;
-    auto input_permute = input.permute(sizes);
-    for(auto index: result) {
-    //   auto index = result[size];
-    //   if(index.defined()) {
-    //     result_indices.push_back(index.permute(sizes));
-    //   } else {
-    //     result_indices.push_back(index);
-    //   }
-        std::cout << "Expanded index size: " << index.sizes() << std::endl;
+    for(int64_t dim: flip_dims) {
+      indices.push_back(create_index(dim, input));
     }
 
-    std::cout << "Permute size: " << input_permute.sizes() << std::endl;
-    return std::make_tuple(input_permute, std::move(result));
+    try {
+      indices = expand_outplace(indices);
+    } catch (std::exception& e) {
+      TORCH_CHECK_INDEX(false, "shape mismatch: indexing tensors could not be broadcast together"
+                        " with shapes ", shapes_as_str(indices));
+    }
+
+    // add missing null Tensors so that it matches self.dim()
+    while (indices.size() < (size_t) input.dim()) {
+      indices.emplace_back();
+    }
+
+    // if the non-null indices are not all adjacent, transpose self and indices
+    // together so that they're adjacent at the front
+    if (!hasContiguousSubspace(indices)) {
+      std::cout << "Not contiguous" << std::endl;
+      std::tie(input, indices) = transposeToFront(input, indices);
+    }
+
+    // Ensure indices are on the same device as self
+    for (size_t i = 0; i < indices.size(); i++) {
+      if (indices[i].defined() && indices[i].device() != input.device()) {
+        indices[i] = indices[i].to(input.device());
+      }
+    }
+
+    // std::cout << "Permute size: " << input_permute.sizes() << std::endl;
+    return std::make_tuple(input, std::move(indices));
 }
 
 static torch::TensorIterator make_index_iterator(const AdvancedIndex& info) {
@@ -260,10 +299,12 @@ torch::Tensor generalized_flip(torch::Tensor input, torch::IntArrayRef flip_dims
     std::sort(dims.begin(), dims.end());
 
     std::vector<torch::Tensor> indices;
+    // std::vector<int64_t> sizes;
     std::tie(input, indices) = build_indices(input, dims);
 
     auto advanced_index = AdvancedIndex(input, indices);
     auto iter = make_index_iterator(advanced_index);
     index_kernel(iter, advanced_index.indexed_sizes, advanced_index.indexed_strides);
-    return iter.output();
+    auto result = iter.output();
+    return result;
 }
