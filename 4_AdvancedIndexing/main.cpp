@@ -17,12 +17,18 @@ int main()
     auto reshaped_tensor = tensor.reshape({dim0, dim1, dim2, dim3}).contiguous();
     std::cout << "Input: " << reshaped_tensor << "\n\n";
 
+    std::cout << "--------------- GENERALIZED FLIP -----------------" << std::endl << std::endl;
+
     auto start = std::chrono::steady_clock::now();
     auto gen_multiflip = generalized_flip(reshaped_tensor, {1, 2, 3});
     auto end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end - start;
     std::cout << "Elapsed time (ms): " << elapsed_seconds.count() * 1000 << std::endl;
+
+    std::cout << "--------------- GENERALIZED FLIP -----------------" << std::endl << std::endl;
+
+    std::cout << "--------------- ADV INDEXING FLIP ----------------" << std::endl << std::endl;
 
     torch::optional<torch::Tensor> dim0_dims;
     torch::optional<torch::Tensor> dim1_dims = torch::arange(dim1 - 1, -1, -1).unsqueeze(-1).unsqueeze(-1);
@@ -39,8 +45,9 @@ int main()
     elapsed_seconds = end - start;
     std::cout << "Elapsed time (ms): " << elapsed_seconds.count() * 1000 << std::endl;
 
-    std::cout << "Flipped!\n";
-    // std::cout << "Index flip: " << index_flip << "\n";
+    std::cout << "--------------- ADV INDEXING FLIP ----------------" << std::endl << std::endl;
+
+    std::cout << "--------------------- FLIP -----------------------" << std::endl << std::endl;
 
     start = std::chrono::steady_clock::now();
     auto multiflip = torch::flip(reshaped_tensor, {1, 2, 3});
@@ -48,10 +55,18 @@ int main()
     elapsed_seconds = end - start;
     std::cout << "Elapsed time (ms): " << elapsed_seconds.count() * 1000 << std::endl;
     // std::cout << "Multiflip: " << multiflip << "\n";
+    std::cout << "Generalized size: " << gen_multiflip.sizes() << std::endl;
+    std::cout << "torch::flip size: " << multiflip.sizes() << std::endl;
 
-    if(!multiflip.allclose(index_flip) && !multiflip.allclose(gen_multiflip)) {
-        std::cout << "Error! Implementation values differ!" << "\n";
-    } else {
+    std::cout << "--------------------- FLIP -----------------------" << std::endl << std::endl;
+
+    if(!multiflip.allclose(index_flip)) {
+        std::cout << "Error! Indexing implementation values differ!" << "\n";
+    }
+    else if(!multiflip.allclose(gen_multiflip)) {
+        std::cout << "Error! Generalized implementation values differ!" << "\n";
+    }
+    else {
         std::cout << "Values are the same!" << "\n";
     }
     return 0;

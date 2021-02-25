@@ -156,6 +156,7 @@ torch::Tensor create_index(int64_t dim, torch::Tensor input) {
 
 std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tensor input, torch::IntArrayRef flip_dims) {
     std::vector<torch::Tensor> result;
+    std::vector<torch::Tensor> result_indices;
     std::vector<torch::Tensor> empty_result;
     std::vector<int64_t> sizes;
     std::vector<int64_t> empty_sizes;
@@ -169,11 +170,14 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
             auto index = create_index(dim, input);
             result.push_back(index);
             sizes.push_back(i);
+            dim_ptr++;
         } else {
             empty_result.emplace_back();
             empty_sizes.push_back(i);
         }
     }
+    std::cout << "Sizes: " << sizes << std::endl;
+    std::cout << "Empty sizes: " << empty_sizes << std::endl;
 
     // Join both defined and empty indices in order to permute the input tensor
     result.insert(result.end(),
@@ -183,8 +187,19 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
     sizes.insert(sizes.end(),
                  std::make_move_iterator(empty_sizes.begin()),
                  std::make_move_iterator(empty_sizes.end()));
+    std::cout << "Sizes: " << sizes << std::endl;
+    auto input_permute = input.permute(sizes);
+    // for(auto size: sizes) {
+    //   auto index = result[size];
+    //   if(index.defined()) {
+    //     result_indices.push_back(index.permute(sizes));
+    //   } else {
+    //     result_indices.push_back(index);
+    //   }
+    // }
 
-    return std::make_tuple(input.permute(sizes), std::move(result));
+    std::cout << "Permute size: " << input_permute.sizes() << std::endl;
+    return std::make_tuple(input_permute, std::move(result));
 }
 
 static torch::TensorIterator make_index_iterator(const AdvancedIndex& info) {
