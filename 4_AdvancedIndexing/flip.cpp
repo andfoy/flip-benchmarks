@@ -37,13 +37,6 @@ struct Indexer {
     int64_t offset = 0;
     for (int j = 0; j < num_indexers; j++) {
       int64_t value = *(int64_t*)&indexers[j][idx * indexer_strides[j]];
-      int64_t size = original_sizes[j];
-      if (value < -size || value >= size) {
-        TORCH_CHECK_INDEX(false, "index ", value, " is out of bounds for dimension ", j, " with size ", size);
-      }
-      if (value < 0) {
-        value += size;
-      }
       offset += value * original_strides[j];
     }
     return offset;
@@ -192,13 +185,13 @@ AdvancedIndex::AdvancedIndex(const torch::Tensor& src, torch::TensorList indices
 }
 
 
-torch::Tensor create_index(int64_t dim, torch::Tensor input) {
+torch::Tensor create_index(int64_t dim_pos, int64_t dim, size_t num_dims, torch::Tensor input) {
     auto dim_index = torch::arange(input.size(dim) - 1, -1, -1).to(
         input.device());
-    for(int64_t i = 0; i < dim - 1; i++) {
+    for(int64_t i = 0; i < dim_pos; i++) {
         dim_index = dim_index.unsqueeze(0);
     }
-    for(int64_t i = dim + 1; i < input.dim(); i++) {
+    for(int64_t i = dim_pos + 1; i < num_dims; i++) {
         dim_index = dim_index.unsqueeze(-1);
     }
     return dim_index;  // dim_index.expand_as(input);
@@ -208,8 +201,9 @@ torch::Tensor create_index(int64_t dim, torch::Tensor input) {
 std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tensor input, torch::IntArrayRef flip_dims) {
     std::vector<torch::Tensor> indices;
 
-    for(int64_t dim: flip_dims) {
-      auto index = create_index(dim, input);
+    for(int64_t i = 0; i < flip_dims.size(); i++) {
+      auto dim = flip_dims[i];
+      auto index = create_index(i, dim, flip_dims.size(), input);
       indices.push_back(index);
       std::cout << "Index size: " << index.sizes() << std::endl;
     }
