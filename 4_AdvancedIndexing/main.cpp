@@ -61,8 +61,11 @@ int main()
 
     std::cout << "--------------------- FLIP -----------------------" << std::endl << std::endl;
 
-    if(!multiflip.allclose(index_flip)) {
-        std::cout << "Error! Indexing implementation values differ!" << "\n";
+    if(!index_flip.allclose(gen_multiflip)) {
+        std::cout << "Error! Advanced indexing and generalized flip values differ!" << "\n";
+    }
+    else if(!multiflip.allclose(index_flip)) {
+        std::cout << "Error! Advanced indexing and torch::flip values differ!" << "\n";
     }
     else if(!multiflip.allclose(gen_multiflip)) {
         std::cout << "Error! Generalized implementation values differ!" << "\n";
