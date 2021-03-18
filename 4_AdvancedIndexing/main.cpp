@@ -20,7 +20,7 @@ int main()
     std::cout << "--------------- GENERALIZED FLIP -----------------" << std::endl << std::endl;
 
     auto start = std::chrono::steady_clock::now();
-    auto gen_multiflip = generalized_flip(reshaped_tensor, {1, 2, 3});
+    auto gen_multiflip = generalized_flip(reshaped_tensor, {1, 3});
     auto end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> elapsed_seconds = end - start;
@@ -31,12 +31,12 @@ int main()
     std::cout << "--------------- ADV INDEXING FLIP ----------------" << std::endl << std::endl;
 
     torch::optional<torch::Tensor> dim0_dims;
-    torch::optional<torch::Tensor> dim1_dims = torch::arange(dim1 - 1, -1, -1).unsqueeze(-1).unsqueeze(-1);
-    torch::optional<torch::Tensor> dim2_dims = torch::arange(dim2 - 1, -1, -1).unsqueeze(0).unsqueeze(-1);
-    torch::optional<torch::Tensor> dim3_dims = torch::arange(dim3 - 1, -1, -1).unsqueeze(0).unsqueeze(0);
+    torch::optional<torch::Tensor> dim1_dims = torch::arange(dim1 - 1, -1, -1).unsqueeze(-1);
+    torch::optional<torch::Tensor> dim2_dims; // = torch::arange(dim2 - 1, -1, -1).unsqueeze(0).unsqueeze(-1);
+    torch::optional<torch::Tensor> dim3_dims = torch::arange(dim3 - 1, -1, -1).unsqueeze(0);
 
     std::cout << "Dim1: " << dim1_dims.value() << std::endl;
-    std::cout << "Dim2: " << dim2_dims.value() << std::endl;
+    // std::cout << "Dim2: " << dim2_dims.value() << std::endl;
     std::cout << "Dim3: " << dim3_dims.value() << std::endl;
 
     start = std::chrono::steady_clock::now();
@@ -50,12 +50,13 @@ int main()
     std::cout << "--------------------- FLIP -----------------------" << std::endl << std::endl;
 
     start = std::chrono::steady_clock::now();
-    auto multiflip = torch::flip(reshaped_tensor, {1, 2, 3});
+    auto multiflip = torch::flip(reshaped_tensor, {1, 3});
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end - start;
     std::cout << "Elapsed time (ms): " << elapsed_seconds.count() * 1000 << std::endl;
     // std::cout << "Multiflip: " << multiflip << "\n";
     std::cout << "Generalized size: " << gen_multiflip.sizes() << std::endl;
+    std::cout << "Advanced Indexing size: " << index_flip.sizes() << std::endl;
     std::cout << "torch::flip size: " << multiflip.sizes() << std::endl;
 
     std::cout << "--------------------- FLIP -----------------------" << std::endl << std::endl;

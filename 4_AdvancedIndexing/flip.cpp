@@ -201,19 +201,18 @@ torch::Tensor create_index(int64_t dim_pos, int64_t dim, size_t num_dims, torch:
 std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tensor input, torch::IntArrayRef flip_dims) {
     std::vector<torch::Tensor> indices;
 
-    for(int64_t i = 0; i < flip_dims.size(); i++) {
-      auto dim = flip_dims[i];
-      auto index = create_index(i, dim, flip_dims.size(), input);
-      indices.push_back(index);
-      std::cout << "Index size: " << index.sizes() << std::endl;
-    }
-
     const int64_t* dim_ptr = flip_dims.begin();
+    int64_t dim_pos = 0;
     for(int64_t i = 0; i < input.dim(); i++) {
-      if(i != *dim_ptr) {
-        indices.emplace(indices.begin());
-      } else {
+      if(i == *dim_ptr) {
+        std::cout << "Dim " << i << " defined"  << std::endl;
+        auto index = create_index(dim_pos, *dim_ptr, flip_dims.size(), input);
+        indices.push_back(index);
         dim_ptr++;
+        dim_pos++;
+      } else {
+        std::cout << "Dim " << i << " undefined" << std::endl;
+        indices.emplace_back();
       }
     }
 
@@ -246,6 +245,15 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
     if (!hasContiguousSubspace(indices)) {
       std::cout << "Not contiguous" << std::endl;
       std::tie(input, indices) = transposeToFront(input, indices);
+
+      for(auto index: indices) {
+        if(index.defined()) {
+          std::cout << "Index size: " << index.sizes() << std::endl;
+        } else {
+          std::cout << "nil index" << std::endl;
+        }
+      }
+      std::cout << "Input size: " << input.sizes() << std::endl;
     }
 
     // Ensure indices are on the same device as self
