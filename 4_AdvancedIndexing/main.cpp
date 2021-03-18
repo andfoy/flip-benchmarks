@@ -41,6 +41,7 @@ int main()
 
     start = std::chrono::steady_clock::now();
     auto index_flip = torch::index(reshaped_tensor, {dim0_dims, dim1_dims, dim2_dims, dim3_dims});
+    index_flip = index_flip.permute({2, 0, 3, 1});
     end = std::chrono::steady_clock::now();
     elapsed_seconds = end - start;
     std::cout << "Elapsed time (ms): " << elapsed_seconds.count() * 1000 << std::endl;

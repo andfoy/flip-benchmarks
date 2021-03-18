@@ -74,7 +74,7 @@ static bool hasContiguousSubspace(torch::TensorList tl) {
 // transposeToFront(tensor, {nullptr, a, nullptr, b})
 // returns
 // tensor.permute([1, 3, 0, 2]), {a, b, nullptr, nullptr}
-static std::tuple<torch::Tensor, std::vector<torch::Tensor>>
+static std::tuple<torch::Tensor, std::vector<torch::Tensor>, std::vector<int64_t>>
 transposeToFront(torch::Tensor self, torch::TensorList indices) {
   std::vector<int64_t> dims;
   std::vector<torch::Tensor> transposedIndices;
@@ -91,7 +91,9 @@ transposeToFront(torch::Tensor self, torch::TensorList indices) {
       transposedIndices.emplace_back();
     }
   }
-  return std::make_tuple(self.permute(dims), std::move(transposedIndices));
+  auto permuted_input = self.permute(dims);
+  std::reverse(dims.begin(), dims.end());
+  return std::make_tuple(permuted_input, std::move(transposedIndices), dims);
 }
 
 // Replace indexed dimensions in src with stride 0 and the size of the result tensor.
@@ -198,7 +200,8 @@ torch::Tensor create_index(int64_t dim_pos, int64_t dim, size_t num_dims, torch:
 }
 
 
-std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tensor input, torch::IntArrayRef flip_dims) {
+std::tuple<torch::Tensor, std::vector<torch::Tensor>, std::vector<int64_t>>
+build_indices(torch::Tensor input, torch::IntArrayRef flip_dims) {
     std::vector<torch::Tensor> indices;
 
     const int64_t* dim_ptr = flip_dims.begin();
@@ -242,9 +245,11 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
 
     // if the non-null indices are not all adjacent, transpose self and indices
     // together so that they're adjacent at the front
+    std::vector<int64_t> transposed_indices;
     if (!hasContiguousSubspace(indices)) {
       std::cout << "Not contiguous" << std::endl;
-      std::tie(input, indices) = transposeToFront(input, indices);
+      std::tie(input, indices, transposed_indices) = transposeToFront(
+        input, indices);
 
       for(auto index: indices) {
         if(index.defined()) {
@@ -264,7 +269,7 @@ std::tuple<torch::Tensor, std::vector<torch::Tensor>> build_indices(torch::Tenso
     }
 
     // std::cout << "Permute size: " << input_permute.sizes() << std::endl;
-    return std::make_tuple(input, std::move(indices));
+    return std::make_tuple(input, std::move(indices), transposed_indices);
 }
 
 static torch::TensorIterator make_index_iterator(const AdvancedIndex& info) {
@@ -324,12 +329,18 @@ torch::Tensor generalized_flip(torch::Tensor input, torch::IntArrayRef flip_dims
     std::sort(dims.begin(), dims.end());
 
     std::vector<torch::Tensor> indices;
+    std::vector<int64_t> transposed_indices;
     // std::vector<int64_t> sizes;
-    std::tie(input, indices) = build_indices(input, dims);
+    std::tie(input, indices, transposed_indices) = build_indices(input, dims);
 
     auto advanced_index = AdvancedIndex(input, indices);
     auto iter = make_index_iterator(advanced_index);
     index_kernel(iter, advanced_index.indexed_sizes, advanced_index.indexed_strides);
     auto result = iter.output();
+
+    if(transposed_indices.size() > 0) {
+      result = result.permute(transposed_indices);
+    }
+
     return result;
 }
