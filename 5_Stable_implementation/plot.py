@@ -24,17 +24,19 @@ def base_agg():
         'float': {
             'cv2': [],
             'torch.flip': [],
+            'flip': [],
             'indexing': []
         },
         'uint8': {
             'cv2': [],
             'torch.flip': [],
+            'flip': [],
             'indexing': []
         }
     }
 
 
-with open('benchmark_results_6.json', 'r') as f:
+with open('benchmark_results.json', 'r') as f:
     results = json.load(f)
 
 agg = {
@@ -59,7 +61,8 @@ for size_entry in results:
                 agg[direction][dtype][source].append((time_mean, time_std))
 
 colors = [('red', 'orangered', 'orange'), ('blue', 'dodgerblue', 'teal'),
-          ('green',  'yellowgreen', 'limegreen')]
+          ('green',  'yellowgreen', 'limegreen'),
+          ('indigo', 'darkslateblue', 'mediumslateblue')]
 legends = ['(H ≪ W)', '', '(H ≫ W)']
 
 # actual_sizes = [x[0] for x in itertools.groupby(sizes)]
