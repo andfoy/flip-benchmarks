@@ -268,30 +268,32 @@ static torch::TensorIterator make_index_iterator(const AdvancedIndex& info) {
 void index_kernel(torch::TensorIterator& iter, torch::IntArrayRef index_size,
                   torch::IntArrayRef index_stride, bool serial_execution=false) {
     using scalar_t = uint8_t;
-    int ntensor = iter.ntensors();
-    // When launch the index parallel version, set a relative samll grain size less than the INTERNAL::GRAIN_SIZE
-    // to make the whole available thread numbers get more balanced work load and a better cache location.
-    // The grain size here is chosen by the op benchmark to overcome the thread launch overhead
-    const int index_parallel_grain_size = 3000;
-    auto loop = [&](char** data, const int64_t* strides, int64_t n) {
-        auto indexer = Indexer(ntensor - 2, &data[2], &strides[2], index_size, index_stride);
-        char* dst = data[0];
-        char* src = data[1];
+    AT_DISPATCH_ALL_TYPES_AND_COMPLEX_AND3(torch::ScalarType::Half, torch::ScalarType::Bool, torch::ScalarType::BFloat16,
+      iter.dtype(), "flip_cpu", [&] {
+        int ntensor = iter.ntensors();
+        // When launch the index parallel version, set a relative samll grain size less than the INTERNAL::GRAIN_SIZE
+        // to make the whole available thread numbers get more balanced work load and a better cache location.
+        // The grain size here is chosen by the op benchmark to overcome the thread launch overhead
+        const int index_parallel_grain_size = 3000;
+        auto loop = [&](char** data, const int64_t* strides, int64_t n) {
+            auto indexer = Indexer(ntensor - 2, &data[2], &strides[2], index_size, index_stride);
+            char* dst = data[0];
+            char* src = data[1];
 
-        // int64_t offset = indexer.get(0);
+            // int64_t offset = indexer.get(0);
 
-        for (int64_t i = 0; i < n; i++) {
-            int64_t offset = indexer.get(i);
-            *(scalar_t*)(dst + strides[0] * i) = *(scalar_t*)(src + strides[1] * i + offset);
+            for (int64_t i = 0; i < n; i++) {
+                int64_t offset = indexer.get(i);
+                *(scalar_t*)(dst + strides[0] * i) = *(scalar_t*)(src + strides[1] * i + offset);
+            }
+        };
+
+        if (serial_execution) {
+            iter.serial_for_each(loop, {0, iter.numel()});
+        } else {
+            iter.for_each(loop, index_parallel_grain_size);
         }
-    };
-
-    if (serial_execution) {
-        iter.serial_for_each(loop, {0, iter.numel()});
-    } else {
-        iter.for_each(loop, index_parallel_grain_size);
-    }
-
+      });
 }
 
 /**

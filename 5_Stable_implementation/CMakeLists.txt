@@ -22,6 +22,8 @@ add_definitions(-DCPU_CAPABILITY_AVX -DCPU_CAPABILITY_AVX2)
 #     "${TORCH_DIR}/lib/libc10.so"
 # )
 
+# CPLUS_INCLUDE_PATH=$CUDA_HOME/include cmake .. -DCUDA_TOOLKIT_ROOT_DIR=$CUDA_HOME -DTorch_DIR=$TORCH_PATH/share/^Cake/Torch -DCMAKE_BUILD_TYPE=Debug
+
 find_package(Torch REQUIRED)
 
 find_package(OpenMP)
