@@ -68,24 +68,41 @@ int main()
     auto tensor = torch::arange(dim0 * dim1 * dim2 * dim3, opts);
     auto reshaped_tensor = tensor.reshape({dim0, dim1, dim2, dim3}).contiguous();
     auto types = {torch::kInt32, torch::kInt64, torch::kByte, torch::kFloat32, torch::kFloat64};
+    auto contiguous = {true, false};
+    auto channels_last = {true, false};
 
     for(auto type: types) {
         reshaped_tensor = reshaped_tensor.to(type);
-        for(auto dim_set : dims_sets) {
-            std::cout << "Dimensions to flip: " << dim_set << std::endl;
-            std::cout << "Type: " << type << std::endl;
-            auto gen_flip = call_generalized_flip(reshaped_tensor, dim_set);
-            auto torch_flip = call_torch_flip(reshaped_tensor, dim_set);
-            std::cout << "Generalized size: " << gen_flip.sizes() << std::endl;
-            std::cout << "torch::flip size: " << torch_flip.sizes() << std::endl;
-            if(!torch_flip.allclose(gen_flip)) {
-                std::cout << "Error! Generalized implementation values differ!" << "\n";
-                return 2;
+        for(auto is_contiguous: contiguous) {
+            auto test_tensor = reshaped_tensor;
+            if(!is_contiguous) {
+                test_tensor = test_tensor.transpose(0, 1);
             }
-            else {
-                std::cout << "Values are the same!" << "\n";
+            for(auto is_channels_last: channels_last) {
+                if(is_channels_last) {
+                    test_tensor = test_tensor.to(torch::MemoryFormat::ChannelsLast);
+                } else {
+                    test_tensor = test_tensor.to(torch::MemoryFormat::Contiguous);
+                }
+                for(auto dim_set : dims_sets) {
+                    std::cout << "Dimensions to flip: " << dim_set << std::endl;
+                    std::cout << "Type: " << type << std::endl;
+                    std::cout << "Contiguous: " << test_tensor.is_contiguous() << std::endl;
+                    std::cout << "Memory format: " << test_tensor.suggest_memory_format() << std::endl;
+                    auto gen_flip = call_generalized_flip(test_tensor, dim_set);
+                    auto torch_flip = call_torch_flip(test_tensor, dim_set);
+                    std::cout << "Generalized size: " << gen_flip.sizes() << std::endl;
+                    std::cout << "torch::flip size: " << torch_flip.sizes() << std::endl;
+                    if(!torch_flip.allclose(gen_flip)) {
+                        std::cout << "Error! Generalized implementation values differ!" << "\n";
+                        return 2;
+                    }
+                    else {
+                        std::cout << "Values are the same!" << "\n";
+                    }
+                    std::cout << "----------------------------------------" << std::endl;
+                }
             }
-            std::cout << "----------------------------------------" << std::endl;
         }
     }
     return 0;
