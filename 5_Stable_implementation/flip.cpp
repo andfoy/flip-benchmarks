@@ -14,10 +14,10 @@ struct Indexer {
   const int64_t* indexer_strides;
 
   int64_t get(int64_t idx) {
-    int64_t offset = 0;
-    for (int j = 0; j < num_indexers; j++) {
-      int64_t value = *(int64_t*)&indexers[j][idx * indexer_strides[j]];
-      offset += value;
+    int64_t offset = *(int64_t*)&indexers[0][idx * indexer_strides[0]];
+    for (int j = 1; j < num_indexers; j++) {
+      offset += *(int64_t*)&indexers[j][idx * indexer_strides[j]];
+      // offset += value;
     }
     return offset;
   }
