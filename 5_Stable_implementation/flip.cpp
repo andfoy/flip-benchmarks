@@ -26,7 +26,12 @@ struct Indexer {
 torch::Tensor build_index(int64_t num_dims, int64_t flip_dim, int64_t dim_size) {
   auto new_shape = std::vector<int64_t>(num_dims, 1);
   new_shape[flip_dim] = dim_size;
-  return torch::empty(new_shape).to(torch::kInt64);
+
+  torch::TensorOptions tensor_options =
+    torch::TensorOptions(torch::kInt64).
+    device(torch::kCPU);
+
+  return torch::empty(new_shape, tensor_options);
 }
 
 std::vector<torch::Tensor> build_indices_loop(torch::Tensor input, torch::IntArrayRef flip_dims) {
@@ -102,7 +107,6 @@ torch::Tensor generalized_flip(torch::Tensor input, torch::IntArrayRef flip_dims
 
     auto shape = input.sizes().vec();
     auto strides = input.strides().vec();
-    int64_t element_size_bytes = input.element_size();
 
     // Set stride to zero on the dimensions that are going to be flipped
     for(auto dim: dims) {
