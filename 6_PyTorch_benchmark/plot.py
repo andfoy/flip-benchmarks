@@ -25,12 +25,13 @@ def base_agg():
             'cv2': [],
             'torch.flip': [],
             'flip': [],
+            'flip_no_avx': [],
             'indexing': []
         },
         'uint8': {
             'cv2': [],
             'torch.flip': [],
-            'flip': [],
+            'flip_no_avx': [],
             'indexing': []
         }
     }
@@ -62,6 +63,7 @@ for size_entry in results:
 
 colors = [('red', 'orangered', 'orange'), ('blue', 'dodgerblue', 'teal'),
           ('green',  'yellowgreen', 'limegreen'),
+          ('chocolate', 'saddlebrown', 'brown'),
           ('indigo', 'darkslateblue', 'mediumslateblue')]
 legends = ['(H ≪ W)', '', '(H ≫ W)']
 

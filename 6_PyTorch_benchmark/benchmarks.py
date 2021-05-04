@@ -86,6 +86,7 @@ func_transforms = {
     'cv2': lambda x: x,
     'torch.flip': lambda x: torch.from_numpy(x).permute(2, 0, 1).contiguous(),
     'flip': lambda x: torch.from_numpy(x).permute(2, 0, 1).contiguous(),
+    'flip_no_avx': lambda x: torch.from_numpy(x).permute(2, 0, 1).contiguous(),
     'indexing': lambda x: torch.from_numpy(x).permute(2, 0, 1).contiguous()
 }
 
@@ -94,12 +95,14 @@ benchmark_funcs = {
         'cv2': lambda x, _: cv2.flip(x, 0),
         'torch.flip': lambda x, _: torch.flip_old(x, [1]),
         'flip': lambda x, _: torch.flip(x, [1]),
+        'flip_no_avx': lambda x, _: torch.flip_internal(x, [1]),
         'indexing': lambda x, indices: x[:, indices, :]
     },
     'horizontal': {
         'cv2': lambda x, _: cv2.flip(x, 1),
         'torch.flip': lambda x, _: torch.flip_old(x, [2]),
         'flip': lambda x, _: torch.flip(x, [2]),
+        'flip_no_avx': lambda x, _: torch.flip_internal(x, [2]),
         'indexing': lambda x, indices: x[:, :, indices]
     }
 }
@@ -118,6 +121,7 @@ index_transforms = {
     'cv2': lambda x: x,
     'torch.flip': lambda x: x,
     'flip': lambda x: x,
+    'flip_no_avx': lambda x: x,
     'indexing': lambda x: torch.arange(len(x) - 1, -1, -1)
 }
 
@@ -129,7 +133,8 @@ for size in sizes:
         rand_input = np.random.rand(*size)
         for dtype in {'float', 'uint8'}:
             sample_input = dtype_transforms[dtype](rand_input)
-            for func in {'cv2', 'torch.flip', 'flip', 'indexing'}:
+            for func in {'cv2', 'torch.flip', 'flip', 'flip_no_avx',
+                         'indexing'}:
                 bench_input = func_transforms[func](sample_input)
                 for direction in {'vertical', 'horizontal'}:
                     indices = index_generators[direction](H, W)
