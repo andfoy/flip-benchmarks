@@ -31,6 +31,7 @@ def base_agg():
         'uint8': {
             'cv2': [],
             'torch.flip': [],
+            'flip': [],
             'flip_no_avx': [],
             'indexing': []
         }
