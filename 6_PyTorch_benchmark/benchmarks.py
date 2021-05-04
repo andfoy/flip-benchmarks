@@ -27,12 +27,14 @@ def timing():
             'cv2': [],
             'torch.flip': [],
             'flip': [],
+            'flip_no_avx': [],
             'indexing': []
         },
         'uint8': {
             'cv2': [],
             'torch.flip': [],
             'flip': [],
+            'flip_no_avx': [],
             'indexing': []
         }
     }
