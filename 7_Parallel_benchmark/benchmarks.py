@@ -136,7 +136,7 @@ for size in sizes:
         for dtype in {'float', 'uint8'}:
             sample_input = dtype_transforms[dtype](rand_input)
             for func in {'cv2', 'torch.flip', 'flip (3000)', 'flip (32768)',
-                         'flip_no_avx', 'indexing'}:
+                         'indexing'}:
                 bench_input = func_transforms[func](sample_input)
                 for direction in {'vertical', 'horizontal'}:
                     indices = index_generators[direction](H, W)
